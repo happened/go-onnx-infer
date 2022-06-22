@@ -1,4 +1,4 @@
-package go_onnx_infer
+package core
 
 /*
 * @Author: kejun.sheng
@@ -7,13 +7,13 @@ package go_onnx_infer
  */
 
 /*
-#cgo linux CFLAGS: -I./include -Wno-attributes
-#cgo LDFLAGS: -L./lib -lonnxruntime
+#cgo linux CFLAGS: -I../include -Wno-attributes
+#cgo LDFLAGS: -L../lib -lonnxruntime -ldl
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <stdio.h>
-#include "./include/onnxruntime_c_api.h"
-#include "./include/type.h"
+#include "../include/onnxruntime_c_api.h"
+#include "../include/type.h"
 // @return library handle
 void* cLibOpen(const char* libName, char** err){
 	void* hdl = dlopen(libName, RTLD_NOW);
@@ -52,16 +52,15 @@ const OrtApi* g_ort = NULL;
 
 
 int Run() {
-// #ifdef _WIN32
-// 	const char* output_file_p = convert_string(output_file);
-// 	const char* input_file_p = convert_string(input_file);
-// #else
-// 	const char* output_file_p = output_file;
-// 	const char* input_file_p = input_file;
-// #endif
-
+	 g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
+	  if (!g_ort) {
+		fprintf(stderr, "Failed to init ONNX Runtime engine.\n");
+		return -1;
+	  }
 	OrtMemoryInfo* memory_info;
 	ORT_ABORT_ON_ERROR(g_ort->CreateCpuMemoryInfo(OrtArenaAllocator, OrtMemTypeDefault, &memory_info));
+
+	
 	return 0;
 }
 

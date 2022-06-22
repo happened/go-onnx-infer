@@ -1,4 +1,4 @@
-package go_onnx_infer
+package core
 
 /*
 * @Author: kejun.sheng
