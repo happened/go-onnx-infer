@@ -51,16 +51,50 @@ const OrtApi* g_ort = NULL;
   } while (0);
 
 
-int Run() {
-	 g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
-	  if (!g_ort) {
+int AllOcEnv(){
+
+	g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
+	if (!g_ort) {
 		fprintf(stderr, "Failed to init ONNX Runtime engine.\n");
 		return -1;
-	  }
+	}
 	OrtMemoryInfo* memory_info;
 	ORT_ABORT_ON_ERROR(g_ort->CreateCpuMemoryInfo(OrtArenaAllocator, OrtMemTypeDefault, &memory_info));
+	// OrtValue* input_tensor = NULL;
+	// //1. 内存info 2. 具体的输入数据float* 3， 输入数据长度 4. 模型解析出来的输入形状比如[1,3,720,720] 5.input形态的长度 6， 数据类型 7.生成的tensor
+    // ORT_ABORT_ON_ERROR(g_ort->CreateTensorWithDataAsOrtValue(memory_info, model_input, model_input_len, input_shape,
+    //                                                        input_shape_len, ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
+    //                                                        &input_tensor));
 
-	
+	return 0;
+}
+
+OrtValue* Run(OcrValue * input_tensor) {
+	//校验input
+	assert(input_tensor != NULL);
+  	int is_tensor;
+  	ORT_ABORT_ON_ERROR(g_ort->IsTensor(input_tensor, &is_tensor));
+  	assert(is_tensor);
+  	g_ort->ReleaseMemoryInfo(memory_info);
+
+	const char* input_names[] = {"inputImage"};
+	const char* output_names[] = {"outputImage"};
+	OrtValue* output_tensor = NULL;
+
+	// 1. session
+	// 2. run_options
+	// 3. 输入名称
+	// 4. 输入的tensor
+	// 5. 输入tensor的key的长度
+	// 6. 输出名称集合
+	// 7. 输出名称长度
+	// 8. 输出的tensor
+	ORT_ABORT_ON_ERROR(g_ort->Run(session, NULL, input_names, (const OrtValue* const*)&input_tensor, 1, output_names, 1,
+									&output_tensor));
+	assert(output_tensor != NULL);
+	ORT_ABORT_ON_ERROR(g_ort->IsTensor(output_tensor, &is_tensor));
+	assert(is_tensor);
+
 	return 0;
 }
 
