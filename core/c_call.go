@@ -37,6 +37,45 @@ int  cLibClose(void* hdl){
 	return 0;
 }
 
+struct OnnxParamList* OnnxParamListCreate(){
+	struct OnnxParamList* pParamPtr= (struct OnnxParamList*)malloc(sizeof(struct OnnxParamList));
+	pParamPtr->key=NULL;
+	pParamPtr->value=NULL;
+	pParamPtr->vlen=0;
+	pParamPtr->next=NULL;
+	return pParamPtr;
+}
+
+struct OnnxParamList* OnnxParamListAppend(struct OnnxParamList* ptr,char* key,char* value,unsigned int vlen){
+	struct OnnxParamList* head=ptr;
+	if(ptr!=NULL && ptr->key==NULL){
+		ptr->key=key;
+		ptr->value=value;
+		ptr->vlen=vlen;
+		return ptr;
+	}
+	while(ptr->next!=NULL){
+		ptr=ptr->next;
+	}
+	struct OnnxParamList* pParamPtr= (struct OnnxParamList*)malloc(sizeof(struct OnnxParamList));
+	pParamPtr->key=key;
+	pParamPtr->value=value;
+	pParamPtr->vlen=vlen;
+	pParamPtr->next=NULL;
+	ptr->next=pParamPtr;
+	return head;
+}
+void OnnxParamListfree(struct OnnxParamList* ptr){
+	struct OnnxParamList* current=ptr;
+	while(current!=NULL){
+		ptr=ptr->next;
+		free(current);
+		current=ptr;
+	}
+	return ;
+}
+
+
 const OrtApi* g_ort = NULL;
 
 #define ORT_ABORT_ON_ERROR(expr)                             \
@@ -65,11 +104,21 @@ int AllOcEnv(){
     // ORT_ABORT_ON_ERROR(g_ort->CreateTensorWithDataAsOrtValue(memory_info, model_input, model_input_len, input_shape,
     //                                                        input_shape_len, ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
     //                                                        &input_tensor));
-
 	return 0;
 }
 
-OrtValue* Run(OcrValue * input_tensor) {
+OnnxParamList RunFloat(OnnxParamList params) {
+	for (OnnxParamList p = params; p != NULL; p = p->next)
+    {
+         if (p->key != NULL && p->value != NULL) {
+            if (std::string("log.level") ==std::string(p->key))
+            {
+                loglvl = p->value;
+                continue;
+            }
+        }
+    }
+	return NULL;
 	//校验input
 	assert(input_tensor != NULL);
   	int is_tensor;
@@ -100,9 +149,33 @@ OrtValue* Run(OcrValue * input_tensor) {
 
 */
 import "C"
-import "fmt"
+import (
+	"fmt"
+	"unsafe"
+)
 
-func Inference() {
-	ret := C.Run()
-	fmt.Println(int(ret))
+type OnnxInput struct {
+	Name  string
+	Shape []int
+	Data  []byte
+}
+
+func Inference(inputs map[string]OnnxInput) {
+	paramList := C.OnnxParamListCreate()
+	defer C.OnnxParamListfree(paramList)
+
+	for _, v := range inputs {
+		key := C.CString(v.Name)
+		defer C.free(unsafe.Pointer(key))
+
+		val := C.CString(v.Data)
+		defer C.free(unsafe.Pointer(val))
+
+		valLen := C.uint(len(v.Data))
+		paramList = C.paramListAppend(paramList, key, val, valLen)
+	}
+	output := C.RunFloat(paramList)
+	if output == nil {
+		fmt.Println("empty result")
+	}
 }
